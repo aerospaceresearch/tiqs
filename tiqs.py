@@ -78,15 +78,16 @@ def gap_resetter(x, gap_length_min):
 measuring the length of a gap
 '''
 def gap_length_counter(x):
+    gap_length = []
     counter = 0
     for i in range(1,len(x)):
         if x[i] == 1 and x[i-1] == 1:
             counter += 1
         else:
             if counter > 0:
-                print "gap length =", counter
+                gap_length.append(counter)
             counter = 0
-    return counter
+    return gap_length
 
 '''
 measuring the period between gaps
@@ -99,6 +100,52 @@ def gap_period_counter(x):
             gap_start.append(i)
 
     for i in range(1,len(gap_start)):
-        print "gap period", gap_start[i] - gap_start[i-1]
         gap_period.append(gap_start[i] - gap_start[i-1])
     return gap_period
+
+def gap_period_stacker(x, spreading):
+    gap_period_count = []
+    gap_period_stack = []
+
+    for i in range(len(x)):
+        if i == 0:
+            gap_period_stack.append(x[i])
+            gap_period_count.append(1)
+        else:
+            isstacked = -1
+            for j in range(len(gap_period_stack)):
+                if x[i] >= gap_period_stack[j] - x[i]*spreading and x[i] <= gap_period_stack[j] + x[i]*spreading:
+                    isstacked = j
+
+            if isstacked == -1:
+                gap_period_stack.append(x[i])
+                gap_period_count.append(1)
+            else:
+                gap_period_count[isstacked] = gap_period_count[isstacked] + 1
+
+    return gap_period_count, gap_period_stack
+
+def detect_null_symbols(stream_iq, samplerate):
+    stream_binned = mean_to_bins(stream_iq, 40)
+    stream_binned_gaps = find_gaps(stream_binned)
+    stream_binned_gaps1 = gap_grower(stream_binned_gaps, 3)
+    stream_binned_gaps2 = gap_resetter(stream_binned_gaps1, 20)
+
+    gap_length = gap_length_counter(stream_binned_gaps2)
+    gap_period = gap_period_counter(stream_binned_gaps2)
+
+    # gaps per second, but if not a second or more, it is adapted
+    gap_length_mean = 0
+    gap_period_max = 0
+    gap_period_count_max = 0
+    gap_period_mean = 0
+    gap_tendency = 0
+    if len(gap_length) > 5 * float(len(stream_iq))/samplerate and len(gap_length) < 100 * float(len(stream_iq))/samplerate:
+        gap_length_mean = np.mean(gap_length)
+        gap_period_count, gap_period_stack = gap_period_stacker(gap_period, 0.01)
+        gap_period_count_max = np.max(gap_period_count)
+        gap_period_mean = np.mean(gap_period_stack)
+        gap_period_max = gap_period_stack[np.argmax(gap_period_count)]
+        gap_tendency = float(np.max(gap_period_count))/np.sum(gap_period_count)
+
+    return gap_length_mean, gap_period_max, gap_period_mean, gap_period_count_max, gap_tendency

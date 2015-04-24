@@ -8,7 +8,6 @@ Each day, I learn more with your help! So thank you for your help and feel free 
 '''
 
 import tiqs
-import matplotlib.pyplot as plt
 import numpy as np
 
 samplerate = 2048000
@@ -29,14 +28,5 @@ for file in filename:
     stream_iq -= np.ones_like(stream_iq) * complex(127, 127)
     stream_iq = np.abs(stream_iq)
 
-    stream_binned = tiqs.mean_to_bins(stream_iq, 60)
-    stream_binned_gaps = tiqs.find_gaps(stream_binned)
-    stream_binned_gaps1 = tiqs.gap_grower(stream_binned_gaps, 3)
-    stream_binned_gaps2 = tiqs.gap_resetter(stream_binned_gaps1, 20)
-
-    gap_length = tiqs.gap_length_counter(stream_binned_gaps2)
-    gap_period = tiqs.gap_period_counter(stream_binned_gaps2)
-
-    plt.plot(stream_binned)
-    plt.plot(stream_binned_gaps2)
-    plt.show()
+    gap_length_mean, gap_period_max, gap_period_mean, gap_period_count_max, gap_tendency = tiqs.detect_null_symbols(stream_iq, samplerate)
+    print "average gap length is", gap_length_mean,"with a best period of",gap_period_max,"and an average of", gap_period_mean,"with", gap_period_count_max,"periods leading to a dab liklyhood of", gap_tendency
